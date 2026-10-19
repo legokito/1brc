@@ -1,5 +1,5 @@
 CXX      = /opt/homebrew/opt/llvm@17/bin/clang++
-CXXFLAGS = -std=c++26 -O3 -Wall -Wextra
+CXXFLAGS = -std=c++20 -O3 -Wall -Wextra
 
 reference: reference.cpp
 	$(CXX) $(CXXFLAGS) $< -o $@
