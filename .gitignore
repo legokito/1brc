@@ -1,0 +1,29 @@
+# macOS
+.DS_Store
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Friend's code (local only)
+src/main/cpp/
+
+# Generated test data (1B rows is ~13GB; GitHub rejects files >100MB)
+data/measurements*.txt
+
+# Build artifacts
+manit-solution/solution
+manit-solution/reference
+*.dSYM/
+*.o
+
+# Instruments profiles
+*.trace/
+
+# Program output
+*.out
+manit-solution/output.txt
+
+# Python
+__pycache__/
