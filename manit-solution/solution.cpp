@@ -11,6 +11,10 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#if __ARM_NEON
+#include <arm_neon.h>
+#endif
+
 
 // to unordered hash with string view 
 struct string_hash
@@ -24,32 +28,37 @@ struct string_hash
 };
 
 
-long floor_div(long a, long b) {
-    long q = a / b;
+int floor_div(int a, int b) {
+    int q = a / b;
     if (a % b != 0 && a < 0) --q;
     return q;
 }
 
+std::string_view format_tenths_better(char* buf, int buf_size, int t) {
+    char* start = buf;
+    if (t < 0) {
+        *start++ = '-';
+    }
 
-std::string format_tenths(long t) {
-    std::string sign = t < 0 ? "-" : "";
-    if (t < 0) t = -t;
-    return sign + std::to_string(t / 10) + "." + std::to_string(t % 10);
+    unsigned int abs_val = t < 0 ? -(unsigned int) t : (unsigned int) t;
+
+    auto [ptr, ec] = std::to_chars(start, buf + buf_size - 2, abs_val/10);
+    *ptr++ = '.';
+    *ptr++ = '0' + abs_val % 10;
+    return std::string_view(buf, ptr-buf);
 }
 
 int main() {
-    std::unordered_map<std::string, std::array<long, 4>, string_hash, std::equal_to<>> dict;
+    std::unordered_map<std::string, std::array<int, 4>, string_hash, std::equal_to<>> dict;
     dict.reserve(10000);
 
     std::string filepath = "../data/measurements.txt";
 
     int fd = open(filepath.c_str(), O_RDONLY);
-    // check correct
 
     struct stat sb;
     fstat(fd, &sb);
     size_t length = sb.st_size;
-    // check correct
 
     void* addr = mmap(nullptr, length, PROT_READ, MAP_PRIVATE, fd, 0);
 
@@ -58,21 +67,34 @@ int main() {
     char* file_data = static_cast<char*>(addr);
     std::string_view view(file_data, length);
 
-    
     size_t start = 0;
     while (start < view.length()) {
-
         size_t end = view.find('\n', start);
         std::string_view line = view.substr(start, end - start);
 
+        int size = line.length();
+
         int pos = std::string_view(line).find(';');
-        int dotPos = std::string_view(line).find('.', pos + 1);
         std::string_view name = std::string_view(line).substr(0, pos);
-        long actualNum = std::stol(std::string(line.substr(pos+1, dotPos-pos-1)) + std::string(line.substr(dotPos+1)));
+
+        int actualNum = 0;
+        int mult = 1;
+
+        for (int i = size-1; i > pos; i--) {
+            if (line[i] == '-') {
+                actualNum *= -1;
+                continue;
+            }
+            else if (line[i] == '.') {
+                i--;
+            }
+            actualNum += (line[i] - '0') * mult;
+            mult *= 10;
+        }
 
         auto it = dict.find(name);
         if (it == dict.end()) {
-            it = dict.emplace(std::string(name), std::array<long, 4>{}).first;
+            it = dict.emplace(std::string(name), std::array<int, 4>{}).first;
         }
 
         if (it->second[3] == 0) {
@@ -94,27 +116,36 @@ int main() {
         start = end + 1;
     }
 
-    std::cout << "{";
-    std::string a;
-    std::string b;
-    std::string c;
 
-    std::map<std::string, std::array<long, 4>> dict_ordered(dict.begin(), dict.end());
+
+
+
+
+
+
+    // output
+    std::cout << "{";
+
+    std::map<std::string, std::array<int, 4>> dict_ordered(dict.begin(), dict.end());
+
+    char buf[32];
+    int buf_size = 32;
 
     int index = 0;
     for (auto& [name, math] : dict_ordered) {
         if (index++ != 0) std::cout << ", ";
 
-        a = format_tenths(math[0]);
-        b = format_tenths(
-            floor_div(2 * math[1] + math[3], 2 * math[3])
-        );
-        c = format_tenths(math[2]);
+        std::string_view a = format_tenths_better(buf, buf_size, math[0]);
+        std::cout << name << "=" << a;
 
-        std::cout << name + "=" 
-                    + a + "/" 
-                    + b + "/" 
-                    + c; 
+        std::string_view b = format_tenths_better(
+            buf, buf_size, floor_div(2 * math[1] + math[3], 2 * math[3])
+        );
+        std::cout << "/" << b; 
+
+        std::string_view c = format_tenths_better(buf, buf_size, math[2]);
+        std::cout << "/" << c; 
+
     }
     std::cout << "}" << std::endl;
 
