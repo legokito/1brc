@@ -62,15 +62,10 @@ day 2 - ~28s
 
 
 
-current bottlenecks to fix:
-- hashmap is taking 60% + time - fix with custom implementation.
-- memchr (related to .find()) is taking 20% of time - fix with SIMD?? ik csv parsers use them so i could try copying them.
-- main itself takes 15% of time (haven't diagnosed)
+## current goals 
+- DIAGNOSE THE FREAKING HASHMAP 
+- look into multithreading
 
-new ideas:
-- since program shares memory, multithreading could massively help
-
-progress:
-- fixed unoptimized formatting of numbers.
-- working on simd to help with the memchr
+problems:
+- have to deal with final 64 bytes of data...
 
