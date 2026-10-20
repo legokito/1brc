@@ -4,7 +4,7 @@ original version: https://github.com/gunnarmorling/1brc
 
 goal: learn performance optimization and cpp optimizations!
 
-currently using c++26 (for simd), and compiling with clang++17. 
+currently using c++20 (for heterogenous lookup), and compiling with clang++17. 
 
 # Usage: 
 ```
@@ -31,7 +31,8 @@ diff output.txt expected.out
 
 # Times
 naive - ~450s
-day 1 - ~56s
+day 1 - ~52s
+day 2 - ~28s
 
 
 # Log
@@ -46,6 +47,21 @@ day 1 - ~56s
 - got started with using instruments to profile my code and logically derive opportunities for improvement. (xctrace)
 
 ## day 2
+- first, I optimized some inefficiencies in my string processing which shaved off a few seconds (we love string_view :P).
+
+- main optimization today came from using SIMD in parsing the strings:
+- I knew that using .find() for each delimiter wasn't as optimal since each memory access could potentially have more delimiters. This meant there was opportunity to SIMD and optimize. 
+- I implemented a bitmask on 16 byte chunks, and looped over the resulting bytes to check whether that element was a delimiter (';', '\n') or not. This didn't provide any meaningful benefit so I continued googling to see how I could actually have this SIMD idea pan out. 
+- That led me to this [article](https://branchfree.org/2019/04/01/fitting-my-head-through-the-arm-holes-or-two-sequences-to-substitute-for-the-missing-pmovmskb-instruction-on-arm-neon) which helped materialize the SIMD efforts I'd poured in and gave me a ~9 second benefit. For string processing being the 2nd or 3rd bottleneck on my list, this was a MASSIVE improvement. It is insane how smart that algorithm was and why it works! 
+
+
+
+
+
+
+
+
+
 current bottlenecks to fix:
 - hashmap is taking 60% + time - fix with custom implementation.
 - memchr (related to .find()) is taking 20% of time - fix with SIMD?? ik csv parsers use them so i could try copying them.
